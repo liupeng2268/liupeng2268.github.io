@@ -1,0 +1,9 @@
+[
+  {"name":"聚合工具箱","url":"https://sps.yy-gp.com/hagu9/i.html","desc":"用户提供的在线工具集合"},
+  {"name":"MDN Web Docs","url":"https://developer.mozilla.org/zh-CN/","desc":"前端权威参考文档"},
+  {"name":"菜鸟教程","url":"https://www.runoob.com/","desc":"入门级中文教程"},
+  {"name":"Can I Use","url":"https://caniuse.com/","desc":"浏览器特性兼容性查询"},
+  {"name":"Regex101","url":"https://regex101.com/","desc":"正则表达式在线调试"},
+  {"name":"JSON 格式化","url":"https://www.json.cn/","desc":"JSON 校验与格式化"},
+  {"name":"GitHub","url":"https://github.com/","desc":"代码托管与协作"}
+]
