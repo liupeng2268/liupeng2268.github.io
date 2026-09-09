@@ -25,11 +25,14 @@ export function navigate(path) {
   }
 }
 
+// 支持 `#/post/xxx#锚点`：path 用于匹配路由，anchor 用于渲染后定位
 function parseHash() {
   let hash = location.hash || '#/';
   if (hash.startsWith('#')) hash = hash.slice(1);
   if (!hash.startsWith('/')) hash = '/' + hash;
-  return hash;
+  const i = hash.indexOf('#');
+  if (i === -1) return { path: hash, anchor: '' };
+  return { path: hash.slice(0, i), anchor: hash.slice(i + 1) };
 }
 
 function matchRoute(path) {
@@ -64,8 +67,23 @@ function updateNavActive(path) {
   });
 }
 
+function scrollToAnchor(anchor) {
+  if (!anchor) {
+    window.scrollTo(0, 0);
+    return;
+  }
+  let el = null;
+  try {
+    el = document.getElementById(decodeURIComponent(anchor));
+  } catch (e) {
+    el = document.getElementById(anchor);
+  }
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else window.scrollTo(0, 0);
+}
+
 async function handleRoute() {
-  const path = parseHash();
+  const { path, anchor } = parseHash();
   const app = document.getElementById('app');
   const matched = matchRoute(path);
   if (matched) {
@@ -77,7 +95,7 @@ async function handleRoute() {
   } else if (notFoundHandler) {
     notFoundHandler(app);
   }
-  window.scrollTo(0, 0);
+  scrollToAnchor(anchor);
   updateNavActive(path);
 }
 

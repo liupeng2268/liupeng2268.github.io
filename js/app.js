@@ -2,6 +2,14 @@
 import { parseFrontMatter, renderMarkdown } from './md.js';
 import { fetchPosts, fetchTools, fetchArticle, fetchAbout } from './data.js';
 import { registerRoute, registerNotFound, navigate, startRouter } from './router.js';
+import {
+  searchBoxHtml,
+  bindSearch,
+  enhanceArticle,
+  resetArticleEnhancements,
+  readingMinutes,
+  pagerHtml,
+} from './features.js';
 
 // ---------- 工具函数 ----------
 function escapeHtml(s) {
@@ -20,11 +28,15 @@ function tagChip(tag) {
   return `<a class="chip" href="#/tag/${encodeURIComponent(tag)}">${escapeHtml(tag)}</a>`;
 }
 
+// 整卡可点击通过标题链接的 ::after 覆盖层实现：
+// 卡片内还有标签链接，若用 <a> 包裹会导致锚点嵌套，浏览器解析器会强制拆分 DOM。
 function postCard(post) {
   return `
-    <a class="post-card" href="#/post/${encodeURIComponent(post.slug)}">
+    <div class="post-card">
       <div class="post-card-body">
-        <h3 class="post-title">${escapeHtml(post.title)}</h3>
+        <h3 class="post-title">
+          <a class="post-card-link" href="#/post/${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a>
+        </h3>
         <p class="post-meta"><time datetime="${escapeHtml(post.date)}">${formatDate(post.date)}</time></p>
         <div class="post-tags">${post.tags.map(tagChip).join('')}</div>
         <p class="post-excerpt">${escapeHtml(post.excerpt)}</p>
@@ -32,8 +44,14 @@ function postCard(post) {
       <span class="post-card-arrow" aria-hidden="true">
         <svg class="icon icon-20"><use href="#icon-arrow-right"/></svg>
       </span>
-    </a>
+    </div>
   `;
+}
+
+function postListHtml(posts, emptyText) {
+  return posts.length
+    ? posts.map(postCard).join('')
+    : `<div class="empty-state">${escapeHtml(emptyText)}</div>`;
 }
 
 function errorState(root, retryPath) {
@@ -52,15 +70,16 @@ async function renderHome(params, root) {
       <header class="page-head">
         <h1 class="page-title">文章</h1>
         <p class="page-subtitle">运维笔记与前端学习记录</p>
+        ${searchBoxHtml()}
       </header>
-      <div class="post-list">
-        ${
-          posts.length
-            ? posts.map(postCard).join('')
-            : `<div class="empty-state">还没有文章</div>`
-        }
-      </div>
+      <div class="post-list" id="postList"></div>
     `;
+    bindSearch({
+      root,
+      posts,
+      scope: 'home',
+      renderList: (list) => postListHtml(list, '没有匹配的文章'),
+    });
   } catch (e) {
     errorState(root, '/');
   }
@@ -74,14 +93,25 @@ async function renderPost(params, root) {
     const { meta, content } = parseFrontMatter(raw);
     const html = renderMarkdown(content);
     const tags = (meta.tags || []).map(tagChip).join('');
+    let pager = '';
+    try {
+      pager = pagerHtml(await fetchPosts(), slug);
+    } catch (e) {
+      pager = '';
+    }
     root.innerHTML = `
       <article class="article">
         <header class="article-head">
           <h1 class="article-title">${escapeHtml(meta.title || slug)}</h1>
-          <p class="post-meta"><time datetime="${escapeHtml(meta.date || '')}">${formatDate(meta.date)}</time></p>
+          <p class="post-meta">
+            <time datetime="${escapeHtml(meta.date || '')}">${formatDate(meta.date)}</time>
+            <span class="meta-sep" aria-hidden="true">·</span>
+            <span>约 ${readingMinutes(content)} 分钟</span>
+          </p>
           <div class="post-tags">${tags}</div>
         </header>
         <div class="article-body markdown">${html}</div>
+        ${pager}
         <footer class="article-foot">
           <a class="back-link" href="#/">返回文章列表</a>
         </footer>
@@ -90,6 +120,7 @@ async function renderPost(params, root) {
     document.querySelectorAll('#app pre code').forEach((el) => {
       if (window.hljs) window.hljs.highlightElement(el);
     });
+    enhanceArticle({ root, slug });
   } catch (e) {
     errorState(root, `/post/${slug}`);
   }
@@ -106,15 +137,16 @@ async function renderTag(params, root) {
       <header class="page-head">
         <h1 class="page-title">标签：${escapeHtml(name)}</h1>
         <p class="page-subtitle">共 ${filtered.length} 篇文章</p>
+        ${searchBoxHtml()}
       </header>
-      <div class="post-list">
-        ${
-          filtered.length
-            ? filtered.map(postCard).join('')
-            : `<div class="empty-state">该标签下还没有文章</div>`
-        }
-      </div>
+      <div class="post-list" id="postList"></div>
     `;
+    bindSearch({
+      root,
+      posts: filtered,
+      scope: `tag:${name}`,
+      renderList: (list) => postListHtml(list, '该标签下没有匹配的文章'),
+    });
   } catch (e) {
     errorState(root, `/tag/${params.name}`);
   }
@@ -235,14 +267,25 @@ function setupMobileMenu() {
 }
 
 // ---------- 注册路由并启动 ----------
-registerRoute('/', renderHome);
-registerRoute('/home', renderHome);
-registerRoute('/post/:slug', renderPost);
-registerRoute('/tag/:name', renderTag);
-registerRoute('/tags', renderTags);
-registerRoute('/about', renderAbout);
-registerRoute('/tools', renderTools);
-registerNotFound((root) => renderNotFound(root));
+// 每次进入路由先清理文章页的滚动监听与进度条（文章页由 enhanceArticle 自行重建）
+function withCleanup(handler) {
+  return async (params, root) => {
+    resetArticleEnhancements();
+    await handler(params, root);
+  };
+}
+
+registerRoute('/', withCleanup(renderHome));
+registerRoute('/home', withCleanup(renderHome));
+registerRoute('/post/:slug', withCleanup(renderPost));
+registerRoute('/tag/:name', withCleanup(renderTag));
+registerRoute('/tags', withCleanup(renderTags));
+registerRoute('/about', withCleanup(renderAbout));
+registerRoute('/tools', withCleanup(renderTools));
+registerNotFound((root) => {
+  resetArticleEnhancements();
+  renderNotFound(root);
+});
 
 setupMobileMenu();
 startRouter();
