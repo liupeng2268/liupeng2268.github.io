@@ -6,6 +6,21 @@
   <title>我的个人网页</title>
   <meta name="description" content="Oracle 数据库运维笔记与前端学习记录" />
 
+  <!-- 站点图标与移动端主题色 -->
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#2563eb" />
+
+  <!-- 社交分享名片：Open Graph + Twitter Card -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="我的个人网页" />
+  <meta property="og:title" content="我的个人网页" />
+  <meta property="og:description" content="Oracle 数据库运维笔记与前端学习记录" />
+  <meta property="og:url" content="https://liupeng2268.github.io/" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="我的个人网页" />
+  <meta name="twitter:description" content="Oracle 数据库运维笔记与前端学习记录" />
+
   <!-- Noto Sans SC 字体 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,6 +56,9 @@
     <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
     </symbol>
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+    </symbol>
   </svg>
 
   <header class="site-header">
@@ -65,6 +83,11 @@
   <div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
 
   <main id="app" class="container app-main"></main>
+
+  <!-- 返回顶部：滚动超过阈值后由 JS 加 .is-visible 淡入 -->
+  <button class="to-top" id="toTop" type="button" aria-label="返回顶部">
+    <svg class="icon icon-20" aria-hidden="true"><use href="#icon-arrow-up"/></svg>
+  </button>
 
   <footer class="site-footer">
     <div class="container">

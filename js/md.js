@@ -29,9 +29,42 @@ export function parseFrontMatter(raw) {
   return { meta, content };
 }
 
-// 渲染 Markdown：marked 解析 → DOMPurify 净化
+// 判断是否为站外链接：非 http(s) 一律算站内（如 #/post/xxx、mailto:）
+function isExternal(href) {
+  if (!/^https?:\/\//i.test(href)) return false;
+  try {
+    return new URL(href, location.href).host !== location.host;
+  } catch (e) {
+    return true;
+  }
+}
+
+// 净化后的二次加工：外链新窗口打开 + 给表格套可滚动容器
+// 用 <template> 承载：它的内容不渲染、不加载资源、不进文档流，适合处理 HTML 字符串
+function postProcess(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+
+  tpl.content.querySelectorAll('a[href]').forEach((a) => {
+    const href = a.getAttribute('href');
+    if (!isExternal(href)) return;
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener noreferrer');
+  });
+
+  tpl.content.querySelectorAll('table').forEach((table) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    table.parentNode.insertBefore(wrap, table);
+    wrap.appendChild(table);
+  });
+
+  return tpl.innerHTML;
+}
+
+// 渲染 Markdown：marked 解析 → DOMPurify 净化 → 二次加工
 export function renderMarkdown(md) {
   const rawHtml = window.marked.parse(md);
   const clean = window.DOMPurify.sanitize(rawHtml);
-  return clean;
+  return postProcess(clean);
 }

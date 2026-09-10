@@ -160,9 +160,17 @@ function updateTocActive() {
   tocLinks.forEach((a, i) => a.classList.toggle('is-active', i === idx));
 }
 
+// 滚动事件每秒可触发上百次，而屏幕最多 60 帧。
+// 用 rAF + 开关把一帧内的多次事件合并成一次执行（节流），避免无谓的布局计算。
+let scrollTicking = false;
 function onScroll() {
-  updateProgress();
-  updateTocActive();
+  if (scrollTicking) return;
+  scrollTicking = true;
+  window.requestAnimationFrame(() => {
+    scrollTicking = false;
+    updateProgress();
+    updateTocActive();
+  });
 }
 
 /* ============================================================
@@ -218,7 +226,41 @@ function bindCodeCopy(body) {
 }
 
 /* ============================================================
-   四、对外接口
+   四、返回顶部
+   ============================================================ */
+let toTopBtn = null;
+let toTopTicking = false;
+
+function onScrollToTop() {
+  if (toTopTicking) return;
+  toTopTicking = true;
+  window.requestAnimationFrame(() => {
+    toTopTicking = false;
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    if (toTopBtn) toTopBtn.classList.toggle('is-visible', y > 400);
+  });
+}
+
+// 系统开启「减弱动态效果」时用瞬间滚动，避免平滑动画引起不适
+function scrollBehavior() {
+  const reduce =
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return reduce ? 'auto' : 'smooth';
+}
+
+// 只在启动时调用一次：与文章页的监听互相独立，切换路由不受影响
+export function setupBackToTop() {
+  toTopBtn = document.getElementById('toTop');
+  if (!toTopBtn) return;
+  toTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
+  });
+  window.addEventListener('scroll', onScrollToTop, { passive: true });
+  onScrollToTop();
+}
+
+/* ============================================================
+   五、对外接口
    ============================================================ */
 
 // 文章页渲染完成后调用：生成目录、复制按钮，开启滚动监听

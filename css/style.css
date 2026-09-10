@@ -349,6 +349,9 @@ img { max-width: 100%; height: auto; }
   text-align: left;
 }
 .markdown th { background: var(--color-surface-warm); font-weight: 600; }
+/* 宽表格在窄屏横向滚动：table 自身 overflow 不可靠，交给外层容器（由 md.js 包裹） */
+.table-wrap { overflow-x: auto; margin: var(--space-5) 0; }
+.table-wrap table { margin: 0; }
 
 /* 行内代码 */
 .markdown :not(pre) > code {
@@ -606,6 +609,34 @@ img { max-width: 100%; height: auto; }
 }
 .code-copy:hover { opacity: 1; color: var(--color-text); }
 .code-copy.is-done { color: var(--color-success); border-color: var(--color-success); }
+
+/* 返回顶部按钮：
+   用 visibility 而非 display:none —— display 无法参与过渡动画，
+   visibility 可以，且隐藏时不会误触点击。 */
+.to-top {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--motion-base) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard);
+}
+.to-top.is-visible { opacity: 1; visibility: visible; }
+.to-top:hover { color: var(--color-primary); border-color: var(--color-primary); }
 
 /* 上下篇 */
 .pager {

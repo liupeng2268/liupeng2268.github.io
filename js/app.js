@@ -2,6 +2,7 @@
 import { parseFrontMatter, renderMarkdown } from './md.js';
 import { fetchPosts, fetchTools, fetchArticle, fetchAbout } from './data.js';
 import { registerRoute, registerNotFound, navigate, startRouter } from './router.js';
+import { setPageMeta } from './seo.js';
 import {
   searchBoxHtml,
   bindSearch,
@@ -9,6 +10,7 @@ import {
   resetArticleEnhancements,
   readingMinutes,
   pagerHtml,
+  setupBackToTop,
 } from './features.js';
 
 // ---------- 工具函数 ----------
@@ -22,6 +24,16 @@ function formatDate(iso) {
   const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   return `${m[1]}年${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
+}
+
+// 从 Markdown 正文提取纯文本摘要：先删代码块，再删标记符号，最后压平空白
+function textExcerpt(content, len = 100) {
+  const text = String(content || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`~\[\]()!|-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > len ? `${text.slice(0, len)}…` : text;
 }
 
 function tagChip(tag) {
@@ -80,6 +92,7 @@ async function renderHome(params, root) {
       scope: 'home',
       renderList: (list) => postListHtml(list, '没有匹配的文章'),
     });
+    setPageMeta({ title: '文章' });
   } catch (e) {
     errorState(root, '/');
   }
@@ -121,6 +134,10 @@ async function renderPost(params, root) {
       if (window.hljs) window.hljs.highlightElement(el);
     });
     enhanceArticle({ root, slug });
+    setPageMeta({
+      title: meta.title || slug,
+      description: textExcerpt(content),
+    });
   } catch (e) {
     errorState(root, `/post/${slug}`);
   }
@@ -147,6 +164,7 @@ async function renderTag(params, root) {
       scope: `tag:${name}`,
       renderList: (list) => postListHtml(list, '该标签下没有匹配的文章'),
     });
+    setPageMeta({ title: `标签：${name}` });
   } catch (e) {
     errorState(root, `/tag/${params.name}`);
   }
@@ -181,6 +199,7 @@ async function renderTags(params, root) {
         }
       </div>
     `;
+    setPageMeta({ title: '标签', description: '按主题浏览全部文章标签' });
   } catch (e) {
     errorState(root, '/tags');
   }
@@ -196,6 +215,7 @@ async function renderAbout(params, root) {
         <div class="article-body markdown">${html}</div>
       </article>
     `;
+    setPageMeta({ title: '关于', description: textExcerpt(raw) });
   } catch (e) {
     errorState(root, '/about');
   }
@@ -232,6 +252,7 @@ async function renderTools(params, root) {
           .join('')}
       </div>
     `;
+    setPageMeta({ title: '工具箱', description: '日常使用的在线工具入口' });
   } catch (e) {
     errorState(root, '/tools');
   }
@@ -245,6 +266,7 @@ function renderNotFound(root) {
       <a class="btn" href="#/">返回首页</a>
     </div>
   `;
+  setPageMeta({ title: '页面不存在' });
 }
 
 // ---------- 移动端菜单切换 ----------
@@ -288,4 +310,5 @@ registerNotFound((root) => {
 });
 
 setupMobileMenu();
+setupBackToTop();
 startRouter();
