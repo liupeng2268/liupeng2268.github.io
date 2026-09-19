@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # WorkBuddy 本地助手记忆，不入库
 .workbuddy/
+
+# CodeBuddy 本地项目数据（IDE 会话/配置），不入库
+.codebuddy/
