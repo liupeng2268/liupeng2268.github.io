@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # CodeBuddy 本地项目数据（IDE 会话/配置），不入库
 .codebuddy/
+
+# 会话交接文档（本地过程产物），不入库
+handoff-*.md
